@@ -1,0 +1,310 @@
+package com.scraper;
+
+import org.openqa.selenium.*;
+import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.chrome.ChromeOptions;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.WebDriverWait;
+
+import java.io.*;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.time.Duration;
+import java.util.*;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
+import org.apache.hc.client5.http.classic.methods.HttpPost;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.core5.http.io.entity.StringEntity;
+import org.apache.hc.core5.http.io.entity.EntityUtils;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.core5.http.io.entity.EntityUtils;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+public class WebScraper {
+    
+    public static WebDriver setupDriver() {
+    	System.setProperty("webdriver.chrome.driver","C:\\selenium Webdriver\\chrome driver\\chromedriver-win64\\chromedriver.exe");
+        ChromeOptions options = new ChromeOptions();
+        //options.addArguments("--headless");
+        options.addArguments("--disable-blink-features=AutomationControlled"); 
+        options.addArguments("--disable-popup-blocking"); 
+        options.addArguments("--disable-infobars");
+        options.addArguments("--disable-gpu");
+        options.addArguments("--no-sandbox");
+        options.addArguments("--disable-dev-shm-usage");
+        return new ChromeDriver(options);
+    }
+    
+    public static List<Map<String, String>> scrapeArticles(WebDriver driver) throws InterruptedException {
+        driver.get("https://elpais.com");
+        driver.manage().window().maximize();
+        Thread.sleep(3000);  // Ensure page loads completely
+
+        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
+
+        try {
+            // Wait for the popup to appear
+            WebElement popupButton = wait.until(ExpectedConditions.elementToBeClickable(
+                By.xpath("//button[contains(@aria-label, 'Agree and close')]") // Adjust text as needed
+            ));
+
+            // Click the button to close the popup
+            popupButton.click();
+            System.out.println("Popup accepted successfully.");
+        } catch (Exception e) {
+            System.out.println("No popup detected or unable to close.");
+        }
+
+        
+        // Find the Opinion section link dynamically
+        WebDriverWait wait2 = new WebDriverWait(driver, Duration.ofSeconds(10));
+        WebElement opinionLink = wait2.until(ExpectedConditions.elementToBeClickable(By.xpath("(//a[contains(text(), 'Opinión')])[2]")));
+        opinionLink.click();
+
+
+        List<Map<String, String>> articleData = new ArrayList<>();
+
+        List<WebElement> articles = driver.findElements(By.cssSelector("article"));
+
+        for (int i = 0; i < Math.min(5, articles.size()); i++) {
+            try {
+                // Re-locate the article elements before interaction to avoid StaleElementReferenceException
+                articles = driver.findElements(By.cssSelector("article"));
+                WebElement article = articles.get(i);
+                WebElement titleElement = article.findElement(By.tagName("h2"));
+                String title = titleElement.getText();
+
+                WebElement linkElement = article.findElement(By.tagName("a"));
+                String articleUrl = linkElement.getAttribute("href");
+
+                driver.get(articleUrl);
+                Thread.sleep(3000); // Ensure article loads fully
+                
+                //JavascriptExecutor js = (JavascriptExecutor) driver;
+                //js.executeScript("document.querySelectorAll('div, iframe, modal, overlay').forEach(el => el.remove());");
+                
+                /*try {
+                    // Wait for the popup to appear
+                    WebDriverWait wait1 = new WebDriverWait(driver, Duration.ofSeconds(5));
+                    WebElement closeButton = wait1.until(ExpectedConditions.elementToBeClickable(By.xpath("//*[contains(text(), 'Permitir anuncios en EL PAÍS')]")));
+
+                    // Click to close the popup
+                    closeButton.click();
+                    System.out.println("Popup closed successfully.");
+                } catch (Exception e) {
+                    System.out.println("No popup detected or unable to close.");
+                } */
+
+                // Use Jsoup to extract article content
+                Document doc = Jsoup.parse(driver.getPageSource());
+                
+                WebDriverWait wait3 = new WebDriverWait(driver, Duration.ofSeconds(10));
+                wait3.until(ExpectedConditions.presenceOfElementLocated(By.cssSelector("article")));
+                
+                Elements paragraphs = doc.select("article p");
+                StringBuilder content = new StringBuilder();
+                for (Element p : paragraphs) {
+                    content.append(p.text()).append(" ");
+                }
+
+                // Extract image URL
+                Element imgTag = doc.selectFirst("figure img");
+                String imgUrl = null;
+
+                if (imgTag != null) {
+                    imgUrl = imgTag.hasAttr("data-src") ? imgTag.attr("data-src") :
+                             imgTag.hasAttr("data-original") ? imgTag.attr("data-original") :
+                             imgTag.attr("src");
+                }
+
+                // Convert relative URL to absolute
+                if (imgUrl != null && !imgUrl.startsWith("http")) {
+                    imgUrl = "https://elpais.com" + imgUrl;
+                }
+
+
+                // Store article details
+                Map<String, String> articleInfo = new HashMap<>();
+                articleInfo.put("title", title);
+                articleInfo.put("content", content.toString());
+                articleInfo.put("imgUrl", imgUrl);
+
+                articleData.add(articleInfo);
+
+                driver.navigate().back();
+                Thread.sleep(3000); // Ensure page loads after navigating back
+            } catch (StaleElementReferenceException e) {
+                System.out.println("Encountered StaleElementReferenceException. Retrying...");
+                i--; // Retry the same index
+            }
+        }
+        return articleData;
+    }
+
+    
+    public static void downloadImages(List<Map<String, String>> articleData) {
+        File dir = new File("images");
+        if (!dir.exists()) dir.mkdir();
+
+        for (int i = 0; i < articleData.size(); i++) {
+            String imgUrl = articleData.get(i).get("imgUrl");
+
+            if (imgUrl != null && !imgUrl.isEmpty()) {
+                try {
+                    // Handle relative URLs
+                    if (imgUrl.startsWith("//")) {
+                        imgUrl = "https:" + imgUrl;
+                    } else if (!imgUrl.startsWith("http")) {
+                        imgUrl = "https://elpais.com" + imgUrl;
+                    }
+
+                    // Debug: Print image URL before downloading
+                    System.out.println("Downloading image: " + imgUrl);
+
+                    // Open connection with headers to mimic a real browser
+                    URL url = new URL(imgUrl);
+                    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                    connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
+                    connection.setRequestProperty("Referer", "https://elpais.com");
+                    connection.setRequestProperty("Accept", "image/webp,image/apng,image/*,*/*;q=0.8");
+                    connection.setRequestProperty("Connection", "keep-alive");
+                    connection.setRequestMethod("GET");
+
+                    int responseCode = connection.getResponseCode();
+                    if (responseCode == HttpURLConnection.HTTP_OK) {
+                        // Read image data
+                        InputStream in = connection.getInputStream();
+                        Path imagePath = Paths.get("images/article_" + (i + 1) + ".jpg");
+                        Files.copy(in, imagePath, StandardCopyOption.REPLACE_EXISTING);
+                        in.close();
+                        System.out.println("Image saved: " + imagePath);
+                    } else {
+                        System.out.println("Failed to download image: " + imgUrl + " (Response Code: " + responseCode + ")");
+                    }
+                } catch (Exception e) {
+                    System.out.println("Error downloading image: " + imgUrl + " - " + e.getMessage());
+                }
+            } else {
+                System.out.println("Skipping download: No valid image URL found for article " + (i + 1));
+            }
+        }
+    }
+    
+    public static String translateGoogle(String text) {
+    	String encodedText = URLEncoder.encode(text, StandardCharsets.UTF_8);
+    	String apiUrl = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=es&tl=en&dt=t&q=" + encodedText;
+
+
+        try (CloseableHttpClient client = HttpClients.createDefault()) {
+            HttpGet request = new HttpGet(apiUrl);
+            
+            try (CloseableHttpResponse response = client.execute(request)) {
+                if (response.getEntity() == null) {
+                    System.out.println("Error: Empty response from API");
+                    return null;
+                }
+
+                String jsonResponse = EntityUtils.toString(response.getEntity());
+
+                // Parse JSON response
+                ObjectMapper mapper = new ObjectMapper();
+                JsonNode rootNode = mapper.readTree(jsonResponse);
+
+                if (rootNode.isArray() && rootNode.size() > 0 && rootNode.get(0).isArray()) {
+                    return rootNode.get(0).get(0).get(0).asText();  // Extract translated text
+                } else {
+                    System.out.println("Unexpected API response: " + jsonResponse);
+                    return null;
+                }
+            }
+        } catch (IOException e) {
+            System.out.println("Translation API request failed: " + e.getMessage());
+            return null;  // Return null if an error occurs
+        }
+    }
+
+
+    
+   /* public static List<String> translateTitles(List<Map<String, String>> articleData) throws Exception {
+        List<String> translatedTitles = new ArrayList<>();
+        String apiUrl = "https://libretranslate.com/";
+        
+        try (CloseableHttpClient client = HttpClients.createDefault()) {
+            for (Map<String, String> article : articleData) {
+                String title = article.get("title");
+                
+                String jsonBody = "{" +
+                        "\"q\": \"" + title + "\"," +
+                        "\"source\": \"es\"," +
+                        "\"target\": \"en\"," +
+                        "\"format\": \"text\"}";
+                
+                HttpPost request = new HttpPost(apiUrl);
+                request.setHeader("Content-Type", "application/json");
+                request.setEntity(new StringEntity(jsonBody));
+                
+                try (CloseableHttpResponse response = client.execute(request)) {
+                    String responseString = EntityUtils.toString(response.getEntity());
+                    System.out.println("Translation API Response: " + responseString);
+                    ObjectMapper mapper = new ObjectMapper();
+                    JsonNode jsonResponse = mapper.readTree(responseString);
+                    if (jsonResponse.has("translatedText")) {
+                        translatedTitles.add(jsonResponse.get("translatedText").asText());
+                    } else {
+                        System.out.println("Warning: 'translatedText' not found in response");
+                    }
+                }
+            }
+        }
+        return translatedTitles;
+    } */
+    
+    public static Map<String, Integer> analyzeTitles(List<String> translatedTitles) {
+        Map<String, Integer> wordCount = new HashMap<>();
+        for (String title : translatedTitles) {
+            String[] words = title.split(" ");
+            for (String word : words) {
+                wordCount.put(word, wordCount.getOrDefault(word, 0) + 1);
+            }
+        }
+        wordCount.values().removeIf(count -> count <= 2);
+        return wordCount;
+    }
+    
+    public static void main(String[] args) throws Exception {
+        WebDriver driver = setupDriver();
+        List<Map<String, String>> articles = scrapeArticles(driver);
+        downloadImages(articles);
+        List<String> translatedTitles = translateTitles(articles);
+        Map<String, Integer> wordAnalysis = analyzeTitles(translatedTitles);
+        driver.quit();
+        
+        System.out.println("Translated Titles:");
+        for (String title : translatedTitles) {
+            System.out.println(title);
+        }
+        
+        System.out.println("\nRepeated Words:");
+        wordAnalysis.forEach((word, count) -> System.out.println(word + ": " + count));
+    }
+}
+

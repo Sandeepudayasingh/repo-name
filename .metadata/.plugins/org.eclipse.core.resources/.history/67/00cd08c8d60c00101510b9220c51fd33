@@ -1,0 +1,41 @@
+package com.scraper;
+
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.List;
+import java.util.Map;
+
+public class ReportGenerator {
+
+    public static void generateReport(List<Map<String, String>> articles, List<String> translatedTitles, Map<String, Integer> wordFrequency) {
+        String fileName = "scraped_report.csv";
+
+        try (FileWriter writer = new FileWriter(fileName)) {
+            // Write CSV header
+            writer.append("Original Title,Translated Title,Content,Image URL\n");
+
+            for (int i = 0; i < articles.size(); i++) {
+                Map<String, String> article = articles.get(i);
+                String originalTitle = article.get("title").replace(",", ""); // Remove commas to avoid CSV issues
+                String translatedTitle = translatedTitles.get(i).replace(",", "");
+                String content = article.get("content").replace(",", ""); 
+                String imgUrl = article.get("imgUrl") != null ? article.get("imgUrl") : "N/A";
+
+                // Write row to CSV
+                writer.append(String.format("\"%s\",\"%s\",\"%s\",\"%s\"\n", originalTitle, translatedTitle, content, imgUrl));
+            }
+
+            // Add word frequency analysis
+            writer.append("\nRepeated Words Analysis\n");
+            writer.append("Word,Count\n");
+            for (Map.Entry<String, Integer> entry : wordFrequency.entrySet()) {
+                writer.append(String.format("%s,%d\n", entry.getKey(), entry.getValue()));
+            }
+
+            System.out.println("📄 Report saved: " + fileName);
+        } catch (IOException e) {
+            System.out.println("❌ Error writing report: " + e.getMessage());
+        }
+    }
+}
+

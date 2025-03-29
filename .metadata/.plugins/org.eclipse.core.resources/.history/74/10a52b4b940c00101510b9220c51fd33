@@ -1,0 +1,125 @@
+import org.openqa.selenium.*;
+import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.chrome.ChromeOptions;
+import com.google.cloud.translate.*;
+import java.io.*;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.*;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
+
+public class WebScraper {
+    
+    public static WebDriver setupDriver() {
+        System.setProperty("webdriver.chrome.driver", "path/to/chromedriver");
+        ChromeOptions options = new ChromeOptions();
+        options.addArguments("--headless");
+        return new ChromeDriver(options);
+    }
+    
+    public static List<Map<String, String>> scrapeArticles(WebDriver driver) throws InterruptedException {
+        driver.get("https://elpais.com");
+        Thread.sleep(3000);
+        
+        WebElement opinionLink = driver.findElement(By.xpath("//a[contains(text(), 'Opinión')]"));
+        opinionLink.click();
+        Thread.sleep(3000);
+        
+        List<WebElement> articles = driver.findElements(By.cssSelector("article"));
+        List<Map<String, String>> articleData = new ArrayList<>();
+        
+        for (int i = 0; i < Math.min(5, articles.size()); i++) {
+            WebElement article = articles.get(i);
+            String title = article.findElement(By.tagName("h2")).getText();
+            String articleUrl = article.findElement(By.tagName("a")).getAttribute("href");
+            
+            driver.get(articleUrl);
+            Thread.sleep(3000);
+            
+            Document doc = Jsoup.parse(driver.getPageSource());
+            Elements paragraphs = doc.select("p");
+            StringBuilder content = new StringBuilder();
+            for (Element p : paragraphs) {
+                content.append(p.text()).append(" ");
+            }
+            
+            Element imgTag = doc.selectFirst("img");
+            String imgUrl = imgTag != null ? imgTag.attr("src") : null;
+            
+            Map<String, String> articleInfo = new HashMap<>();
+            articleInfo.put("title", title);
+            articleInfo.put("content", content.toString());
+            articleInfo.put("imgUrl", imgUrl);
+            
+            articleData.add(articleInfo);
+            driver.navigate().back();
+            Thread.sleep(3000);
+        }
+        return articleData;
+    }
+    
+    public static void downloadImages(List<Map<String, String>> articleData) {
+        File dir = new File("images");
+        if (!dir.exists()) dir.mkdir();
+        
+        for (int i = 0; i < articleData.size(); i++) {
+            String imgUrl = articleData.get(i).get("imgUrl");
+            if (imgUrl != null) {
+                try {
+                    URL url = new URL(imgUrl);
+                    InputStream in = url.openStream();
+                    Files.copy(in, Paths.get("images/article_" + (i + 1) + ".jpg"));
+                    in.close();
+                } catch (Exception e) {
+                    System.out.println("Failed to download image: " + e.getMessage());
+                }
+            }
+        }
+    }
+    
+    public static List<String> translateTitles(List<Map<String, String>> articleData) throws Exception {
+        Translate translate = TranslateOptions.getDefaultInstance().getService();
+        List<String> translatedTitles = new ArrayList<>();
+        
+        for (Map<String, String> article : articleData) {
+            String translatedText = translate.translate(article.get("title"), Translate.TranslateOption.sourceLanguage("es"), Translate.TranslateOption.targetLanguage("en")).getTranslatedText();
+            translatedTitles.add(translatedText);
+        }
+        return translatedTitles;
+    }
+    
+    public static Map<String, Integer> analyzeTitles(List<String> translatedTitles) {
+        Map<String, Integer> wordCount = new HashMap<>();
+        for (String title : translatedTitles) {
+            String[] words = title.split(" ");
+            for (String word : words) {
+                wordCount.put(word, wordCount.getOrDefault(word, 0) + 1);
+            }
+        }
+        wordCount.values().removeIf(count -> count <= 2);
+        return wordCount;
+    }
+    
+    public static void main(String[] args) throws Exception {
+        WebDriver driver = setupDriver();
+        List<Map<String, String>> articles = scrapeArticles(driver);
+        downloadImages(articles);
+        List<String> translatedTitles = translateTitles(articles);
+        Map<String, Integer> wordAnalysis = analyzeTitles(translatedTitles);
+        driver.quit();
+        
+        System.out.println("Translated Titles:");
+        for (String title : translatedTitles) {
+            System.out.println(title);
+        }
+        
+        System.out.println("\nRepeated Words:");
+        wordAnalysis.forEach((word, count) -> System.out.println(word + ": " + count));
+    }
+}
+
