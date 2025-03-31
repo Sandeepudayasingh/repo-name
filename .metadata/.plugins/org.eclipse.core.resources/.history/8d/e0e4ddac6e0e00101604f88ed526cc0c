@@ -1,0 +1,24 @@
+browserstack:
+  username: "sandeepudayasing_zbn2dp"
+  access_key: "9JdfVBNuyzzxSwHbySx8"
+  build_name: "BrowserStack Test Build"
+  project_name: "BrowserStackTest"
+
+platforms:
+  - browserName: "Chrome"
+    browserVersion: "120.0"
+    os: "Windows"
+    osVersion: "10"
+
+  - browserName: "Safari"
+    browserVersion: "15.6"
+    os: "OS X"
+    osVersion: "Monterey"
+
+  - browserName: "chromium"
+    osVersion: "15"
+    deviceName: "iPhone 13"
+    realMobile: true
+
+parallels: 3
+

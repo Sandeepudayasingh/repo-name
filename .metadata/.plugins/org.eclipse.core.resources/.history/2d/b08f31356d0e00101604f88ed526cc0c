@@ -1,0 +1,117 @@
+package com.scraper;
+
+import org.openqa.selenium.*;
+import org.openqa.selenium.remote.RemoteWebDriver;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.WebDriverWait;
+import org.testng.annotations.*;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.time.Duration;
+import java.util.*;
+import org.testng.annotations.Optional;
+
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
+
+public class BrowserStackTest {
+    private WebDriver driver;
+    
+    @DataProvider(name = "browserData", parallel = true)
+    public Object[][] getBrowserData() {
+        return new Object[][]{
+            {"Chrome", "Windows", "10", "120.0", ""},
+            {"Safari", "OS X", "Monterey", "15.6", ""},
+            {"chromium", "", "15", "", "iPhone 13"}
+        };
+    }
+
+    @BeforeTest
+    @Parameters({"browser", "os", "os_version", "browser_version", "device"})
+    public void setupDriver(@Optional("Chrome") String browser, 
+                            @Optional("Windows") String os, 
+                            @Optional("10") String os_version, 
+                            @Optional("") String browser_version, 
+                            @Optional("") String device) throws MalformedURLException {
+        MutableCapabilities caps = new MutableCapabilities();
+        
+        if (!device.isEmpty()) { // Mobile Test
+            caps.setCapability("browserName", browser);
+            caps.setCapability("os_version", os_version);
+            caps.setCapability("device", device);
+            caps.setCapability("real_mobile", true);
+        } else { // Desktop Test
+            caps.setCapability("browserName", browser);
+            caps.setCapability("os", os);
+            caps.setCapability("os_version", os_version);
+            caps.setCapability("browserVersion", browser_version);
+        }
+        
+        caps.setCapability("name", "Web Scraper Parallel Test");
+        caps.setCapability("build", "BrowserStack WebScraper Build");
+        caps.setCapability("project", "Web Scraper");
+        
+        String BROWSERSTACK_URL = "https://" + System.getenv("BROWSERSTACK_USERNAME") + ":" +
+                                  System.getenv("BROWSERSTACK_ACCESS_KEY") +
+                                  "@hub-cloud.browserstack.com/wd/hub";
+        
+        driver = new RemoteWebDriver(new URL(BROWSERSTACK_URL), caps);
+    }
+
+    @Test(dataProvider = "browserData")
+    public void testScrapeArticles(String browser, String os, String os_version, String browser_version, String device) throws InterruptedException {
+        driver.get("https://elpais.com");
+        driver.manage().window().maximize();
+        Thread.sleep(3000);
+        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
+        
+        try {
+            WebElement popupButton = wait.until(ExpectedConditions.elementToBeClickable(
+                By.xpath("//button[contains(@aria-label, 'Agree and close')]")));
+            popupButton.click();
+        } catch (Exception e) {
+            System.out.println("No popup detected or unable to close.");
+        }
+
+        WebElement opinionLink = wait.until(ExpectedConditions.elementToBeClickable(By.xpath("(//a[contains(text(), 'Opinión')])[2]")));
+        opinionLink.click();
+        
+        List<WebElement> articles = driver.findElements(By.cssSelector("article"));
+        List<Map<String, String>> articleData = new ArrayList<>();
+        
+        for (int i = 0; i < Math.min(5, articles.size()); i++) {
+            try {
+                articles = driver.findElements(By.cssSelector("article"));
+                WebElement article = articles.get(i);
+                String title = article.findElement(By.tagName("h2")).getText();
+                String articleUrl = article.findElement(By.tagName("a")).getAttribute("href");
+                driver.get(articleUrl);
+                Thread.sleep(3000);
+                Document doc = Jsoup.parse(driver.getPageSource());
+                Elements paragraphs = doc.select("article p");
+                StringBuilder content = new StringBuilder();
+                for (Element p : paragraphs) {
+                    content.append(p.text()).append(" ");
+                }
+                Map<String, String> articleInfo = new HashMap<>();
+                articleInfo.put("title", title);
+                articleInfo.put("content", content.toString());
+                articleData.add(articleInfo);
+                driver.navigate().back();
+                Thread.sleep(3000);
+            } catch (StaleElementReferenceException e) {
+                System.out.println("Encountered StaleElementReferenceException. Retrying...");
+                i--;
+            }
+        }
+    }
+
+    @AfterTest
+    public void tearDown() {
+        if (driver != null) {
+            driver.quit();
+        }
+    }
+}

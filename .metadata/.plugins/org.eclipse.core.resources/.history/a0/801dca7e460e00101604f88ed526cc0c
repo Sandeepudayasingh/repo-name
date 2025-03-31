@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd">
+<suite name="BrowserStack Parallel Tests" parallel="tests" thread-count="5">
+
+
+    <test name="Chrome on Windows">
+        <parameter name="browser" value="chrome"/>
+        <parameter name="os" value="Windows"/>
+        <parameter name="os_version" value="11"/>
+        <classes>
+            <class name="com.scraper.WebScraper"/>
+        </classes>
+    </test>
+
+    <test name="Firefox on Windows">
+        <parameter name="browser" value="firefox"/>
+        <parameter name="os" value="Windows"/>
+        <parameter name="os_version" value="11"/>
+        <classes>
+            <class name="com.scraper.WebScraper"/>
+        </classes>
+    </test>
+
+    <test name="Safari on macOS">
+        <parameter name="browser" value="safari"/>
+        <parameter name="os" value="OS X"/>
+        <parameter name="os_version" value="Monterey"/>
+        <classes>
+            <class name="com.scraper.WebScraper"/>
+        </classes>
+    </test>
+
+    <test name="Chrome on Android">
+        <parameter name="browser" value="chrome"/>
+        <parameter name="device" value="Samsung Galaxy S22"/>
+        <parameter name="real_mobile" value="true"/>
+        <parameter name="os_version" value="12.0"/>
+        <classes>
+            <class name="com.scraper.WebScraper"/>
+        </classes>
+    </test>
+
+    <test name="Safari on iPhone">
+        <parameter name="browser" value="safari"/>
+        <parameter name="device" value="iPhone 14"/>
+        <parameter name="real_mobile" value="true"/>
+        <parameter name="os_version" value="16"/>
+        <classes>
+            <class name="com.scraper.WebScraper"/>
+        </classes>
+    </test>
+</suite>
+

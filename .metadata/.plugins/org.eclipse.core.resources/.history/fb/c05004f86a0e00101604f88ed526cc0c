@@ -1,0 +1,53 @@
+<suite name="BrowserStack Parallel Suite" parallel="tests" thread-count="5">
+    <!-- Test for Chrome on Windows 10 -->
+    <test name="Chrome on Windows 10">
+        <parameter name="browser" value="Chrome"/>
+        <parameter name="os" value="Windows"/>
+        <parameter name="os_version" value="10"/>
+        <classes>
+            <class name="com.scraper.BrowserStackTest"/>
+        </classes>
+    </test>
+
+    <!-- Test for Safari on OS X -->
+    <test name="Safari on OS X Monterey">
+        <parameter name="browser" value="Safari"/>
+        <parameter name="os" value="OS X"/>
+        <parameter name="os_version" value="Monterey"/>
+        <classes>
+            <class name="com.scraper.BrowserStackTest"/>
+        </classes>
+    </test>
+
+    <!-- Test for iPhone 13 with Chromium -->
+    <test name="iPhone 13 Chromium">
+        <parameter name="device" value="iPhone 13"/>
+        <parameter name="os" value="iOS"/>
+        <parameter name="os_version" value="15"/>
+        <parameter name="browser" value="chromium"/>
+        <classes>
+            <class name="com.scraper.BrowserStackTest"/>
+        </classes>
+    </test>
+
+    <!-- Test for Samsung Galaxy S23 with Chrome -->
+    <test name="Samsung Galaxy S23 Chrome">
+        <parameter name="device" value="Samsung Galaxy S23"/>
+        <parameter name="os_version" value="13.0"/>
+        <parameter name="browser" value="Chrome"/>
+        <classes>
+            <class name="com.scraper.BrowserStackTest"/>
+        </classes>
+    </test>
+
+    <!-- Test for Edge on Windows 11 -->
+    <test name="Edge on Windows 11">
+        <parameter name="browser" value="Edge"/>
+        <parameter name="os" value="Windows"/>
+        <parameter name="os_version" value="11"/>
+        <classes>
+            <class name="com.scraper.BrowserStackTest"/>
+        </classes>
+    </test>
+</suite>
+

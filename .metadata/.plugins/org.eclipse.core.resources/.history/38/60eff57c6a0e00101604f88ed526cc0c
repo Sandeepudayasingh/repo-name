@@ -1,0 +1,44 @@
+# BrowserStack Credentials
+auth:
+  username: "sandeepudayasing_zbn2dp"
+  access_key: "9JdfVBNuyzzxSwHbySx8"
+
+# Parallel Execution Settings
+parallels: 5  # Number of parallel tests to run
+
+# Test Capabilities
+platforms:
+  - browserName: "Chrome"
+    browserVersion: "120.0"
+    os: "Windows"
+    osVersion: "10"
+  
+  - browserName: "Safari"
+    browserVersion: "15.6"
+    os: "OS X"
+    osVersion: "Monterey"
+  
+  - browserName: "chromium"
+    deviceName: "iPhone 13"
+    osVersion: "15"
+
+  - browserName: "Edge"
+    browserVersion: "latest"
+    os: "Windows"
+    osVersion: "11"
+
+  - browserName: "Firefox"
+    browserVersion: "latest"
+    os: "Windows"
+    osVersion: "10"
+
+# BrowserStack Local Testing (if needed)
+browserstackLocal: false
+
+# Build and Project Information
+buildName: "WebScraper Test Build"
+projectName: "BrowserStackTest"
+
+# Console and Network Logs
+consoleLogs: "info"
+networkLogs: true

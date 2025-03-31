@@ -1,0 +1,55 @@
+package com.scraper;
+
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.remote.DesiredCapabilities;
+import org.openqa.selenium.remote.RemoteWebDriver;
+import org.testng.annotations.*;
+
+import java.net.MalformedURLException;
+import java.net.URL;
+
+public class BrowserStackTest {
+
+    public static final String USERNAME = "your_username";
+    public static final String ACCESS_KEY = "your_access_key";
+    public static final String URL = "https://" + USERNAME + ":" + ACCESS_KEY + "@hub-cloud.browserstack.com/wd/hub";
+
+    private WebDriver driver;
+
+    @Parameters({"browser", "os", "os_version", "device", "real_mobile"})
+    @BeforeTest
+    public void setUp(@Optional("") String browser, @Optional("") String os, @Optional("") String os_version,
+                      @Optional("") String device, @Optional("") String real_mobile) throws MalformedURLException {
+
+        DesiredCapabilities caps = new DesiredCapabilities();
+
+        if (!device.isEmpty()) {
+            // Mobile Test
+            caps.setCapability("device", device);
+            caps.setCapability("real_mobile", real_mobile);
+            caps.setCapability("os_version", os_version);
+            caps.setCapability("browserName", browser);
+        } else {
+            // Desktop Test
+            caps.setCapability("browserName", browser);
+            caps.setCapability("os", os);
+            caps.setCapability("os_version", os_version);
+        }
+
+        caps.setCapability("name", "Parallel Test on BrowserStack");
+
+        driver = new RemoteWebDriver(new URL(URL), caps);
+    }
+
+    @Test
+    public void testWebsite() {
+        driver.get("https://www.example.com");
+        System.out.println("Title: " + driver.getTitle());
+        assert driver.getTitle().contains("Example Domain");
+    }
+
+    @AfterTest
+    public void tearDown() {
+        driver.quit();
+    }
+}

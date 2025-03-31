@@ -1,0 +1,54 @@
+<suite name="BrowserStack Parallel Suite" parallel="tests" thread-count="5">
+    <test name="Chrome on Windows 11">
+        <classes>
+            <class name="tests.BrowserStackTest">
+                <parameter name="browser" value="Chrome"/>
+                <parameter name="os" value="Windows"/>
+                <parameter name="os_version" value="11"/>
+            </class>
+        </classes>
+    </test>
+
+    <test name="Firefox on Windows 10">
+        <classes>
+            <class name="tests.BrowserStackTest">
+                <parameter name="browser" value="Firefox"/>
+                <parameter name="os" value="Windows"/>
+                <parameter name="os_version" value="10"/>
+            </class>
+        </classes>
+    </test>
+
+    <test name="iPhone 15 Safari">
+        <classes>
+            <class name="tests.BrowserStackTest">
+                <parameter name="device" value="iPhone 15"/>
+                <parameter name="os_version" value="17"/>
+                <parameter name="real_mobile" value="true"/>
+                <parameter name="browser" value="Safari"/>
+            </class>
+        </classes>
+    </test>
+
+    <test name="Samsung Galaxy S23 Chrome">
+        <classes>
+            <class name="tests.BrowserStackTest">
+                <parameter name="device" value="Samsung Galaxy S23"/>
+                <parameter name="os_version" value="13.0"/>
+                <parameter name="real_mobile" value="true"/>
+                <parameter name="browser" value="Chrome"/>
+            </class>
+        </classes>
+    </test>
+
+    <test name="Edge on Windows 11">
+        <classes>
+            <class name="tests.BrowserStackTest">
+                <parameter name="browser" value="Edge"/>
+                <parameter name="os" value="Windows"/>
+                <parameter name="os_version" value="11"/>
+            </class>
+        </classes>
+    </test>
+</suite>
+
